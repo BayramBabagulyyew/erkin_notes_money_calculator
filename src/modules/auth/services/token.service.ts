@@ -1,4 +1,3 @@
-import { responseMessage } from '@common/http/custom.response';
 import { IEnvironment } from '@common/interfaces';
 import { UserModel } from '@db/models';
 import { UsersService } from '@modules/users/services/users.service';
@@ -82,19 +81,14 @@ export class TokenService {
     const verified = this.verifyToken(refreshToken, TokenType.RefreshToken);
     const user: UserModel = await this.userService.getUserByUsername(
       verified.email,
-      verified.type,
     );
 
     const payload: JwtPayload = {
       id: user.id,
       email: user.email,
-      type: verified.type,
-      isSuper: user.isSuper,
     };
     const authTokens: TokenDto = await this.generateAuthToken(payload);
-    authTokens.isSuperUser = user.isSuper;
-
-    return responseMessage({ action: 'success', data: authTokens });
+    return authTokens;
   }
 
   /**
@@ -150,9 +144,16 @@ export class TokenService {
     expiresIn: string,
     secret: string,
   ): Promise<string> {
-    return await this.jwtService.signAsync(payload, {
-      expiresIn,
+    // cast to any to satisfy JwtService overloads (local JwtPayload may differ from library types)
+    // convert numeric string to number, otherwise pass through and assert as any to satisfy typings
+    const expires =
+      typeof expiresIn === 'string' && /^\d+$/.test(expiresIn)
+        ? Number(expiresIn)
+        : (expiresIn as any);
+
+    return await this.jwtService.signAsync(payload as any, {
+      expiresIn: expires,
       secret,
-    });
+    } as any);
   }
 }

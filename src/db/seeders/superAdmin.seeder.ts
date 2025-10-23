@@ -1,5 +1,5 @@
-import { UserType } from '@common/enums';
-import { UserModel } from '@modules/users/models/user.model';
+import { UserModel } from '@db/models';
+import { Logger } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 
 export class Seeder {
@@ -9,14 +9,15 @@ export class Seeder {
     const hashedPass = await bcrypt.hash(password, salt);
 
     await UserModel.findOrCreate({
-      where: { email: 'test@gmail.com' },
+      where: { email: 'sexy@gmail.com' },
       defaults: {
-        email: 'test@gmail.com',
+        email: 'sexy@gmail.com',
         password: hashedPass,
         fullName: 'Super Admin',
-        type: UserType.ADMIN,
         isSuper: true,
-      } as typeof UserModel.prototype, // or use the correct creation attributes type if available
+      } as any,
     });
+
+    Logger.warn(`Super Admin seeded with email: test@gmail.com`);
   }
 }

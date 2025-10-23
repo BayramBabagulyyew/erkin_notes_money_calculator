@@ -1,7 +1,7 @@
 import { HttpResponseInterceptor } from '@common/http';
 import { IEnvironment } from '@common/interfaces';
 import { SwaggerConfig } from '@config';
-import compression from '@fastify/compress';
+import { Seeder } from '@db/seeders/superAdmin.seeder';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -10,13 +10,10 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { useContainer } from 'class-validator';
-import * as express from 'express';
-import { contentParser } from 'fastify-multer';
-import { I18nValidationExceptionFilter } from 'nestjs-i18n';
 import { join } from 'path';
 import 'reflect-metadata';
 import { AppModule } from './app.module';
-async function marify() {
+async function task() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: true }),
@@ -60,8 +57,7 @@ async function marify() {
   // the fallback option is to spare our selfs from importing all the class-validator modules to nestJS
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  app.register(compression, { encodings: ['gzip', 'deflate'] });
-  app.useGlobalFilters(new I18nValidationExceptionFilter());
+  // app.register(compression, { encodings: ['gzip', 'deflate'] });
 
   // app.use(I18nMiddleware);
   app.setGlobalPrefix(globalApiPrefix);
@@ -69,6 +65,10 @@ async function marify() {
   if (process.env.NODE_ENV !== 'production') {
     SwaggerConfig(app, appVersion, url);
   }
+
+  // Seed super user
+  Seeder.seedSuperUser()
+
 
   // await app.register(helmet, {
   //   contentSecurityPolicy: {
@@ -81,9 +81,6 @@ async function marify() {
   //   },
   // });
 
-  app.register(contentParser);
-
-  app.use('/static', express.static(join(__dirname, '..', 'public/static/')));
 
   app.useStaticAssets({
     root: join(__dirname, '..', 'uploads'),
@@ -97,4 +94,4 @@ async function marify() {
 
   // return appPort;
 }
-marify();
+task();

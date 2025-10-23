@@ -1,7 +1,8 @@
-import { JUST_USER, SKIP_AUTH, SKIP_AUTH_REFRESH } from '@common/constants';
+import { SKIP_AUTH, SKIP_AUTH_REFRESH } from '@common/constants';
 import {
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -9,10 +10,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { ExtractJwt } from 'passport-jwt';
 import { TokenType } from '../enums';
 import { TokenService } from '../services';
-import { UserType } from '@common/enums';
 
 @Injectable()
 export class JwtAdminGuard extends AuthGuard('jwt') {
+  private logger = new Logger('JwtAdminGuard');
   constructor(
     private tokenService: TokenService,
     private reflector: Reflector,
@@ -30,10 +31,7 @@ export class JwtAdminGuard extends AuthGuard('jwt') {
       context.getHandler(),
       context.getClass(),
     ]);
-    const justUser = this.reflector.getAllAndOverride<boolean>(JUST_USER, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+
 
     const skipAuthRefresh = this.reflector.getAllAndOverride<boolean>(
       SKIP_AUTH_REFRESH,
@@ -68,12 +66,6 @@ export class JwtAdminGuard extends AuthGuard('jwt') {
     if (!payload) {
       throw new UnauthorizedException();
     }
-    if (justUser) {
-      return super.canActivate(context);
-    }
-    if (UserType.ADMIN !== payload.type) {
-      throw new UnauthorizedException();
-    }
 
     return super.canActivate(context);
   }
@@ -86,6 +78,7 @@ export class JwtAdminGuard extends AuthGuard('jwt') {
    */
   handleRequest(error: any, user: any) {
     if (error) {
+      this.logger.error(`Error validating user jwt: ${error}`);
       throw new UnauthorizedException();
     }
     return user;

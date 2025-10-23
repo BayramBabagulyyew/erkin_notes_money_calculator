@@ -1,5 +1,5 @@
 
-import { UserModel } from '@modules/users/models/user.model';
+import { CurrenciesModel, TransactionsModel, UserCurrenciesModel, UserModel } from '@db/models';
 import { Sequelize } from 'sequelize-typescript';
 import { dataBaseConfig } from './db.config';
 import { IDatabaseConfigAttributes } from './db.interface';
@@ -17,7 +17,10 @@ export const databaseProviders = [
         timezone,
       });
       sequelize.addModels([
-        UserModel
+        CurrenciesModel,
+        UserModel,
+        UserCurrenciesModel,
+        TransactionsModel,
       ]);
       // await sequelize.sync();
       await sequelize.sync({ alter: true });

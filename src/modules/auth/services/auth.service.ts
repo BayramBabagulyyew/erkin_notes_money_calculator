@@ -1,7 +1,5 @@
-import { UserType } from '@common/enums';
 import { HashHelper as Hash, HashHelper } from '@common/helpers';
 import { Mailer } from '@common/helpers/sendMail';
-import { responseMessage } from '@common/http/custom.response';
 import { UserModel } from '@db/models';
 import { UsersService } from '@modules/users/services/users.service';
 import {
@@ -29,7 +27,7 @@ export class AuthService {
   public async generateTokenForLogin() {
     const generatedUuid = uuidv4();
     // this.myCache.set(generatedUuid, 0, 600);
-    return responseMessage({ action: 'success', data: generatedUuid });
+    return generatedUuid;
   }
 
   async register(dto: RegisterDto) {
@@ -39,7 +37,7 @@ export class AuthService {
     // }
     const user: UserModel = await this.userService.getUserByUsername(
       dto.email,
-      'user',
+
     );
 
     if (user) {
@@ -49,7 +47,6 @@ export class AuthService {
       email: dto.email,
       password: dto.password,
       fullName: dto.fullName,
-      phoneNumber: dto.phoneNumber,
       isSuper: false,
       notify: true,
     });
@@ -57,18 +54,15 @@ export class AuthService {
       throw new NotFoundException('User not created');
     }
     const payload: JwtPayload = {
-      id: createdUser.data.id,
-      type: UserType.USER,
-      email: createdUser.data.email,
-      isSuper: createdUser.data.isSuper,
+      id: createdUser.id,
+      email: createdUser.dataValues.email,
     };
     const waitingToken: Promise<TokenDto> =
       this.tokenService.generateAuthToken(payload);
 
     const token: TokenDto = await waitingToken;
-    token.isSuperUser = createdUser.data.isSuper;
 
-    return responseMessage({ action: 'success', data: token });
+    return token;
   }
 
   public async login(dto: LoginDto) {
@@ -78,7 +72,6 @@ export class AuthService {
     // }
     const user: UserModel = await this.userService.getUserByUsername(
       dto.email,
-      'user',
     );
 
     if (!user) {
@@ -87,17 +80,13 @@ export class AuthService {
 
     const payload: JwtPayload = {
       id: user.id,
-      type: UserType.USER,
-      email: user.email,
-      isSuper: user.isSuper,
+      email: user.dataValues.email,
     };
     const waitingToken: Promise<TokenDto> =
       this.tokenService.generateAuthToken(payload);
 
     const token: TokenDto = await waitingToken;
-    token.isSuperUser = user.isSuper;
-
-    return responseMessage({ action: 'success', data: token });
+    return token
   }
 
   public async adminLogin(dto: LoginDto) {
@@ -107,9 +96,8 @@ export class AuthService {
     // }
     const user: UserModel = await this.userService.getUserByUsername(
       dto.email,
-      'admin',
     );
-    console.log('user', user);
+
     if (!user) {
       throw new UnauthorizedException();
     }
@@ -128,34 +116,31 @@ export class AuthService {
 
     const payload: JwtPayload = {
       id: user.id,
-      type: UserType.ADMIN,
-      email: user.email,
-      isSuper: user.isSuper,
+      email: user.dataValues.email,
     };
     const waitingToken: Promise<TokenDto> =
       this.tokenService.generateAuthToken(payload);
 
     const token: TokenDto = await waitingToken;
-    token.isSuperUser = user.isSuper;
 
-    return responseMessage({ action: 'success', data: token });
+    return token;
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.userService.getUserByUsername(dto.email, 'user');
+    const user = await this.userService.getUserByUsername(dto.email);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     const newPass = Math.floor(1000 + Math.random() * 9000).toString();
-    console.log('newPass', newPass);
+
     const hashed = await Hash.encrypt(newPass);
     const pass = await user.update({ password: hashed });
-    console.log(pass);
+
     await Mailer.sendEmailMessage(
       user.email,
       'Password Reset',
       `Your new password: ${newPass}`,
     );
-    return responseMessage({ action: 'success', data: true });
+    return true;
   }
 }
