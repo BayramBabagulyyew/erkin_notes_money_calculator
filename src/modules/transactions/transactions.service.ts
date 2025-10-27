@@ -1,5 +1,5 @@
 import { Pagination, PaginationRequest } from '@common/libs/pagination';
-import { TransactionsModel } from '@db/models';
+import { CurrenciesModel, TransactionsModel, UserCurrenciesModel } from '@db/models';
 import { JwtPayload } from '@modules/auth/dtos';
 import { CurrenciesService } from '@modules/currencies/currencies.service';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
@@ -105,6 +105,15 @@ export class TransactionsService {
     const total = await this.transactions.count({ where });
     const data = await this.transactions.findAll({
       where,
+      include: [{
+        model: UserCurrenciesModel,
+        attributes: ['id', 'currencyId'],
+        where: { userId: user.id },
+        include: [{
+          model: CurrenciesModel,
+          attributes: ['id', 'name']
+        }]
+      }],
       limit: pagination.limit,
       offset: pagination.skip,
       order: [[pagination.orderBy, pagination.orderDirection]]
